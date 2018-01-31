@@ -204,6 +204,7 @@ function cf7pp_activate()
         'return' => '',
         'error_color'=>'#f44336',
         'sucess_color' => '#8BC34A',
+        'zaringate' => '0',
     );
 
     add_option("cf7pp_options", $cf7pp_options);
@@ -580,11 +581,23 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         // save and update options
         if (isset($_POST['update'])) {
 
+		
+		
+			
+			
+		
+		
             $options['gateway_merchantid'] = sanitize_text_field($_POST['gateway_merchantid']);
             $options['return'] = sanitize_text_field($_POST['return']);
             $options['sucess_color'] = sanitize_text_field($_POST['sucess_color']);
             $options['error_color'] = sanitize_text_field($_POST['error_color']);
 
+			if(!empty($_POST['zaringate']))
+				$options['zaringate']=1;
+			else
+				$options['zaringate']=0;
+			
+			
             update_option("cf7pp_options", $options);
 
             update_option('cf7pp_theme_message', wp_filter_post_kses($_POST['theme_message']));
@@ -604,6 +617,12 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
 
         $theme_message = get_option('cf7pp_theme_message', '');
         $theme_error_message = get_option('cf7pp_theme_error_message', '');
+		if($value['zaringate']==1){ 
+			$checked= 'checked';
+		}else{
+			$checked= '';
+		}
+		
         
         echo "<div class='wrap'><h2>Contact Form 7 - Gateway Settings</h2></div><br />
 		<table width='90%'><tr><td>";
@@ -721,7 +740,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
            <td>رنگ متن موفقیت آمیز بودن تراکنش :  </td>
 
             <td>
-            <input type="text" name="sucess_color" style="width:150px;text-align:left;direction:ltr;;color:'.$value['sucess_color'].'" value="' . $value['sucess_color'] . '">
+            <input type="text" name="sucess_color" style="width:150px;text-align:left;direction:ltr;color:'.$value['sucess_color'].'" value="' . $value['sucess_color'] . '">
            
  مانند :     #8BC34A     یا نام رنگ  
  green
@@ -737,10 +756,19 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
             <input type="text" name="error_color" style="width:150px;text-align:left;direction:ltr;color:'.$value['error_color'].'" value="' . $value['error_color'] . '">
             مانند : #f44336 یا نام رنگ  red
             </td>
+          </tr>
+          <tr><td></td></tr><tr><td></td></tr>
+          
+          
+		  <td>استفاده از درگاه پرداخت زرین گیت    </td>
+            <td>
+            <input type="checkbox" name="zaringate" value="1" '.$checked.'>
+			<span style="color:red">برای استفاده از درگاه زرین گیت باید ابتدا ان را بر روی درگاه خود فعال کنید</span>
+            </td>
           
           </tr>
-          
-          
+		  
+		  
 		   <tr>
           <td colspan="3">
           <input type="submit" name="btn2" class="button-primary" style="font-size: 17px;line-height: 28px;height: 32px;float: right;" value="ذخیره تنظیمات">

@@ -84,7 +84,12 @@
                         $s = $wpdb->insert($table_name, $_x, $_y);
 
 
-                       Header('Location: https://www.zarinpal.com/pg/StartPay/' . $result->Authority);
+						if($value['zaringate']==1){ 
+							Header('Location: https://www.zarinpal.com/pg/StartPay/' . $result->Authority.'/ZarinGate');
+						}else{
+							Header('Location: https://www.zarinpal.com/pg/StartPay/' . $result->Authority);
+						}
+						
                     } else {
                         $tmp = 'خطایی رخ داده در اطلاعات پرداختی درگاه' . '<br>Error:' . $result->Status . '<br> لطفا به مدیر اطلاع دهید <br><br>';
                         $tmp .= '<a href="' . get_option('siteurl') . '" class="mrbtn_red" > بازگشت به سایت </a>';
