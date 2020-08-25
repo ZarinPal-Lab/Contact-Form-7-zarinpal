@@ -39,8 +39,11 @@ function result_payment_func($atts)
 {
     global $wpdb;
     $Return_MessageEmail = '';
+    //$Return_Trans_id = $_GET['Authority'];
+     $Status = $_GET['Status'];
+   // $Return_Trans_id=$_GET['data']["authority"];
+   // $Status=$_GET['data']['code'];
     $Return_Trans_id = $_GET['Authority'];
-    $Status = $_GET['Status'];
 
     $Theme_Message = get_option('cf7pp_theme_message', '');
 
@@ -55,46 +58,101 @@ function result_payment_func($atts)
     $sucess_color = $value['sucess_color'];
     $error_color = $value['error_color'];
 
+
     if ($Status == 'OK') {
-        
+
         $table_name = $wpdb->prefix . 'cfZ7_transaction';
-        $cf_Form = $wpdb->get_row("SELECT * FROM $table_name WHERE transid=" . $Return_Trans_id);
+        // $cf_Form = $wpdb->get_row("SELECT * FROM $table_name WHERE transid=" . $Return_Trans_id);
+        $cf_Form = $wpdb->get_row("SELECT * FROM $table_name WHERE transid =  '$Return_Trans_id'");
         if (null !== $cf_Form) {
             $Amount = $cf_Form->cost;
         }
 
-        $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']);
+        //   $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']);
 
-        $result = $client->PaymentVerification(
-            [
-                'MerchantID' => $MID,
-                'Authority' => $Return_Trans_id,
-                'Amount' => $Amount,
-            ]
-        );
-        
-        
-        if ($result->Status == 100) {
-            $Return_MessageEmail = 'success';
+        //  $result = $client->PaymentVerification(
+        //    [
+        //      'MerchantID' => $MID,
+        //     'Authority' => $Return_Trans_id,
+        //       'Amount' => $Amount,
+        //  ]
+        //   );
+        $data = array('merchant_id' => $MID, 'authority' => $Return_Trans_id, 'amount' => $Amount);
+        $jsonData = json_encode($data);
+        $ch = curl_init('https://api.zarinpal.com/pg/v4/payment/verify.json');
+        curl_setopt($ch, CURLOPT_USERAGENT, 'ZarinPal Rest Api v1');
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($jsonData)
+        ));
+        $result = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+        $result = json_decode($result, true);
+
+        if ($err) {
+            echo "خطا رخ داده است : " . $err;
+
         }
-    } else {
-        $Return_MessageEmail = 'error';
+        else  {
+            if ($result['data']['code'] == 100) {
+                $Return_MessageEmail = 'success';
+              //  echo 'Transation success. RefID:' . $result ['data']['ref_id'];
+              
+            }
+
+            else {
+                $Return_MessageEmail = 'error';
+                //echo $result ['data']['code'];
+                echo 'تراکنش ناموفق کد :' . $result ['data']['code'];
+            }
+        }
+
+
+        /*
+                if ($result->Status == 100) {
+                    $Return_MessageEmail = 'success';
+                }
+            } else {
+                $Return_MessageEmail = 'error';
+            }*/
+
+
+        if ($Return_MessageEmail == 'success') {
+            $res=$result ['data']['ref_id'];
+            $table_name1=$wpdb->prefix . 'cfZ7_transaction';
+           // $wpdb->query("UPDATE  $table_name1 SET status='error' WHERE status='none'");
+         //   $wpdb->query( "UPDATE  $table_name1 SET status='success' WHERE //transid='$res'");
+           // $RefID=$result ['data']['ref_id'];
+            $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'success', 'transid' => $res), array('transid' => $Return_Trans_id), array('%s', '%s'), array('%s'));
+            //$wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'success', 'transid' => $result ['data']['ref_id']), array('transid' => $Return_Trans_id), array('%s', '%s'), array('%d'));
+            //Dispaly
+            $body = '<b style="color:' . $sucess_color . ';">' . stripslashes(str_replace('[transaction_id]',   $res, $Theme_Message)) . '<b/>';
+            return CreateMessage_cf7("", "", $body);
+        } else if ($Return_MessageEmail == 'error') {
+            $res=$result ['data']['ref_id'];
+           // $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'error'), array('transid' => $Return_Trans_id), array('%s'), array('%d'));
+            $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'error'), array('transid' =>  $res), array('%s'), array('%s'));
+            //Dispaly
+            $body = '<b style="color:' . $error_color . ';">' . $theme_error_message . '<b/>';
+            return CreateMessage_cf7("", "", $body);
+        }
     }
+    else if($Status == 'NOK') {
+        $table_name = $wpdb->prefix . 'cfZ7_transaction';
+        // $cf_Form = $wpdb->get_row("SELECT * FROM $table_name WHERE transid=" . $Return_Trans_id);
+        $cf_Form = $wpdb->get_row("SELECT * FROM $table_name WHERE transid =  '$Return_Trans_id'");
+        //UPDATE `wp_cfZ7_transaction` SET `status`='eeee' WHERE status='none'
 
-
-    if ($Return_MessageEmail == 'success') {
-        $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'success', 'transid' => $result->RefID), array('transid' => $Return_Trans_id), array('%s', '%s'), array('%d'));
-
+        $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'none'), array('transid' => $Return_Trans_id), array('%s'), array('%d'));
+      //  $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => //'error'), array('transid' => $Return_Trans_id), array('%s'), array//('%d'));
         //Dispaly
-        $body = '<b style="color:'.$sucess_color.';">'.stripslashes(str_replace('[transaction_id]', $result->RefID, $Theme_Message)).'<b/>';
-        return CreateMessage_cf7("", "", $body);
-    } else if ($Return_MessageEmail == 'error') {
-        $wpdb->update($wpdb->prefix . 'cfZ7_transaction', array('status' => 'error'), array('transid' => $Return_Trans_id), array('%s'), array('%d'));
-        //Dispaly
-        $body = '<b style="color:'.$error_color.';">'.$theme_error_message.'<b/>';
+        $body = '<b style="color:' . $error_color . ';">' . $theme_error_message . '<b/>';
         return CreateMessage_cf7("", "", $body);
     }
-
 
 }
 
@@ -166,7 +224,7 @@ function cf7pp_activate()
 			created_at bigint(11) DEFAULT '0' NOT NULL,
 			email VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci  NULL,
 			description VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
-			user_mobile VARCHAR(11) CHARACTER SET utf8 COLLATE utf8_persian_ci  NULL,
+			user_mobile VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci  NULL,
 			status VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_persian_ci NOT NULL,
 			PRIMARY KEY id (id)
 		);";
@@ -408,7 +466,7 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
 
         //input -name
         $admin_table_output .= "<table>";
-        $admin_table_output .= "<tr><td>مبلغ: </td><td><input type='text' name='price' style='text-align:left;direction:ltr;' value='$price'></td><td>(مبلغ به تومان)</td></tr>";
+        $admin_table_output .= "<tr><td>مبلغ: </td><td><input type='text' name='price' style='text-align:left;direction:ltr;' value='$price'></td><td>(مبلغ به ریال)</td></tr>";
 
         $admin_table_output .= "</table>";
 
@@ -483,7 +541,8 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
         $offset = ($pagenum - 1) * $limit;
         $table_name = $wpdb->prefix . "cfZ7_transaction";
 
-        $transactions = $wpdb->get_results("SELECT * FROM $table_name where (status NOT like 'none') ORDER BY $table_name.id DESC LIMIT $offset, $limit", ARRAY_A);
+       // $transactions = $wpdb->get_results("SELECT * FROM $table_name where (status NOT like 'none') ORDER BY $table_name.id DESC LIMIT $offset, $limit", ARRAY_A);
+         $transactions = $wpdb->get_results("SELECT * FROM $table_name  ORDER BY $table_name.id DESC LIMIT $offset, $limit", ARRAY_A);
         $total = $wpdb->get_var("SELECT COUNT($table_name.id) FROM $table_name where (status NOT like 'none') ");
         $num_of_pages = ceil($total / $limit);
         $cntx = 0;
@@ -537,8 +596,11 @@ if (is_plugin_active('contact-form-7/wp-contact-form-7.php')) {
 
                 if ($transaction['status'] == "success") {
                     echo '<b style="color:#0C9F55">موفقیت آمیز</b>';
-                } else {
+                } else if ($transaction['status'] == "none") {
                     echo '<b style="color:#f00">انجام نشده</b>';
+                }else if ($transaction['status'] == "error"){
+                    echo '<b style="color:#f00">خطا/b>';
+                    
                 }
                 echo '</td></tr>';
 
