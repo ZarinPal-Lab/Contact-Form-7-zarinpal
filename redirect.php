@@ -111,20 +111,16 @@ if ($active_gateway == 'ZarinPal') {
 
             if ($result['data']['code'] == 100) {
 
-
                 $_x['transid'] = $result['data']["authority"];
 
                 $s = $wpdb->insert($table_name, $_x, $_y);
 
-                echo'<html><body>
-<script type="text/javascript" src="https://cdn.zarinpal.com/zarinak/v1/checkout.js"></script>
-<script type="text/javascript">
-    window.onload = function () {
-        Zarinak.setAuthority("' . $result['data']["authority"] . '");
-        Zarinak.showQR();
-        Zarinak.open();
-    };
-</script></body></html>';
+                if ($value['zaringate'] == 1) {
+                    header('Location: https://www.zarinpal.com/pg/StartPay/' . $result['data']["authority"] . '/ZarinGate');
+
+                } else {
+                    header('Location: https://www.zarinpal.com/pg/StartPay/' . $result['data']["authority"]);
+                }
             } else {
                 /*echo '<p>' .
                     $result['errors']['code'] . '<br>' .

@@ -100,14 +100,14 @@ function result_payment_func($atts)
         else  {
             if ($result['data']['code'] == 100) {
                 $Return_MessageEmail = 'success';
-                //echo 'Transation success. RefID:' . $result ['data']['ref_id'];
+              //  echo 'Transation success. RefID:' . $result ['data']['ref_id'];
               
             }
 
             else {
                 $Return_MessageEmail = 'error';
                 //echo $result ['data']['code'];
-                echo 'تراکنش ناموفق کد :' . $result['errors']['code'];
+                echo 'تراکنش ناموفق کد :' . $result ['data']['code'];
             }
         }
 
